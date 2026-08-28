@@ -10,10 +10,11 @@ let claudeDir: string;
 beforeEach(() => { claudeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hud-mon-')); });
 afterEach(() => { fs.rmSync(claudeDir, { recursive: true, force: true }); });
 
-function writeSession(file: string, pid: number, sessionId: string, cwd: string): void {
+function writeSession(file: string, pid: number, sessionId: string, cwd: string, name?: string): void {
   const dir = path.join(claudeDir, 'sessions');
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, file), JSON.stringify({ pid, sessionId, cwd, startedAt: 500 }));
+  const data = { pid, sessionId, cwd, startedAt: 500, ...(name ? { name } : {}) };
+  fs.writeFileSync(path.join(dir, file), JSON.stringify(data));
 }
 
 function writeTranscript(cwd: string, sessionId: string, lines: string[]): string {
@@ -84,5 +85,55 @@ describe('SessionMonitor.refresh', () => {
     expect(sink[0][0].title).toBe('sid-with'); // sessionId.slice(0, 8)
     expect(sink[0][0].description).toBe('');
     expect(sink[0][0].lastActivityMs).toBe(500);
+  });
+
+  it('uses name fallback tier when no transcript', async () => {
+    const cwd = path.join(claudeDir, 'ws');
+    writeSession('1.json', 1, 'sid-with-name', cwd, 'proj-a1');
+    const sink: SessionCard[][] = [];
+    await makeMonitor(cwd, sink).refresh();
+    expect(sink[0][0].title).toBe('proj-a1');
+    expect(sink[0][0].description).toBe('');
+  });
+
+  it('coalesces concurrent refresh calls', async () => {
+    const cwd = path.join(claudeDir, 'ws');
+    writeSession('1.json', 1, 'sid-a', cwd);
+    writeTranscript(cwd, 'sid-a', [
+      JSON.stringify({ type: 'ai-title', aiTitle: 'Test' }),
+    ]);
+
+    const sink: SessionCard[][] = [];
+    const mon = makeMonitor(cwd, sink);
+    const p1 = mon.refresh();
+    const p2 = mon.refresh();
+    await Promise.all([p1, p2]);
+
+    while (sink.length < 2) await new Promise(r => setTimeout(r, 10));
+    expect(sink.length).toBe(2);
+  });
+
+  it('start/stop lifecycle manages polling and watching', async () => {
+    const cwd = path.join(claudeDir, 'ws');
+    writeSession('1.json', 1, 'sid-a', cwd);
+    writeTranscript(cwd, 'sid-a', [
+      JSON.stringify({ type: 'ai-title', aiTitle: 'Test' }),
+    ]);
+
+    const sink: SessionCard[][] = [];
+    const mon = new SessionMonitor({
+      claudeDir,
+      folders: () => [cwd],
+      aliveFn: () => true,
+      pollIntervalMs: 25,
+      onSnapshot: (cards) => sink.push(cards),
+    });
+
+    mon.start();
+    while (sink.length < 2) await new Promise(r => setTimeout(r, 10));
+    mon.stop();
+    const n = sink.length;
+    await new Promise(r => setTimeout(r, 120));
+    expect(sink.length).toBe(n);
   });
 });
