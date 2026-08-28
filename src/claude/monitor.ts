@@ -42,6 +42,9 @@ export class SessionMonitor {
     this.timer = setInterval(() => void this.refresh(), this.opts.pollIntervalMs ?? 3000);
     try {
       this.watcher = fs.watch(this.sessionsDir, () => void this.refresh());
+      this.watcher.on('error', () => {
+        this.watcher = undefined;
+      });
     } catch {
       // sessions dir may not exist yet; polling still covers it
     }
@@ -100,7 +103,11 @@ export class SessionMonitor {
           this.cache.set(entry.sessionId, { mtimeMs: stat.mtimeMs, info, transcriptPath });
         }
       } catch {
-        // transcript vanished between find and stat: keep fallbacks
+        // transcript vanished or moved: drop the stale cache entry and fall
+        // back immediately instead of keeping stale info, so the next
+        // refresh re-resolves the path from scratch
+        this.cache.delete(entry.sessionId);
+        info = {};
       }
     }
     return {

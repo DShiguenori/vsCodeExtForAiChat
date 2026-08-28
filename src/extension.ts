@@ -9,8 +9,16 @@ export function activate(context: vscode.ExtensionContext): void {
   const monitor = new SessionMonitor({
     folders: () => (vscode.workspace.workspaceFolders ?? []).map((f) => f.uri.fsPath),
     onSnapshot: (cards) => {
-      provider.update(cards);
-      statusBar.update(cards);
+      try {
+        statusBar.update(cards);
+      } catch {
+        // status bar surface failed: keep the webview update independent
+      }
+      try {
+        provider.update(cards);
+      } catch {
+        // webview may be disposed/unavailable: keep the status bar update independent
+      }
     },
   });
 

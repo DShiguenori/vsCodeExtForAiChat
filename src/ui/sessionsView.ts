@@ -12,6 +12,9 @@ export class SessionsViewProvider implements vscode.WebviewViewProvider {
     this.view = view;
     view.webview.options = { enableScripts: false };
     view.webview.html = renderSessionsHtml(this.cards, Date.now());
+    view.onDidDispose(() => {
+      if (this.view === view) this.view = undefined;
+    });
   }
 
   update(cards: SessionCard[]): void {

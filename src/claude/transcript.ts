@@ -44,7 +44,8 @@ export async function extractTranscriptInfo(transcriptPath: string): Promise<Tra
           const rec = JSON.parse(line);
           if (rec.type === 'ai-title' && typeof rec.aiTitle === 'string') info.aiTitle = rec.aiTitle;
         } catch { /* skip */ }
-      } else if (line.includes('"last-prompt"')) {
+      }
+      if (line.includes('"last-prompt"')) {
         try {
           const rec = JSON.parse(line);
           if (rec.type === 'last-prompt' && typeof rec.lastPrompt === 'string') info.lastPrompt = rec.lastPrompt;

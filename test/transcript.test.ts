@@ -54,6 +54,20 @@ describe('extractTranscriptInfo', () => {
     expect(info.lastPrompt).toBe('faz o /merge-main');
   });
 
+  it('captures a last-prompt whose text contains the literal substring "ai-title"', async () => {
+    const f = path.join(dir, 't2.jsonl');
+    fs.writeFileSync(
+      f,
+      [
+        JSON.stringify({ type: 'ai-title', aiTitle: 'Título inicial' }),
+        JSON.stringify({ type: 'last-prompt', lastPrompt: 'renomeia o campo "ai-title" do schema' }),
+      ].join('\n') + '\n',
+    );
+    const info = await extractTranscriptInfo(f);
+    expect(info.aiTitle).toBe('Título inicial');
+    expect(info.lastPrompt).toBe('renomeia o campo "ai-title" do schema');
+  });
+
   it('returns empty object for empty or unreadable file', async () => {
     const f = path.join(dir, 'empty.jsonl');
     fs.writeFileSync(f, '');

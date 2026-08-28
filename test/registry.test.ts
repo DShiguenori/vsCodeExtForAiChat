@@ -41,6 +41,12 @@ describe('readRegistry', () => {
   it('returns [] when the directory does not exist', () => {
     expect(readRegistry(path.join(dir, 'nope'), () => true)).toEqual([]);
   });
+
+  it('rejects pid 0 even when the alive callback returns true', () => {
+    write('100.json', entry({ pid: 0 }));
+    const out = readRegistry(dir, () => true);
+    expect(out).toEqual([]);
+  });
 });
 
 describe('isUnderFolder', () => {

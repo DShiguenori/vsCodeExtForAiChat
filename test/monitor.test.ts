@@ -96,6 +96,32 @@ describe('SessionMonitor.refresh', () => {
     expect(sink[0][0].description).toBe('');
   });
 
+  it('falls back when the transcript disappears, then re-resolves it when it reappears', async () => {
+    const cwd = path.join(claudeDir, 'ws');
+    writeSession('1.json', 1, 'sid-a', cwd);
+    const f = writeTranscript(cwd, 'sid-a', [
+      JSON.stringify({ type: 'ai-title', aiTitle: 'Título original' }),
+    ]);
+
+    const sink: SessionCard[][] = [];
+    const mon = makeMonitor(cwd, sink);
+    await mon.refresh();
+    expect(sink[0][0].title).toBe('Título original');
+
+    // Transcript vanishes entirely: delete the file and its slug directory.
+    fs.rmSync(path.dirname(f), { recursive: true, force: true });
+    await mon.refresh();
+    expect(sink[1][0].title).toBe('sid-a'); // sessionId tier fallback
+    expect(sink[1][0].lastActivityMs).toBe(500); // startedAt fallback
+
+    // Transcript reappears at the same path with a new title.
+    writeTranscript(cwd, 'sid-a', [
+      JSON.stringify({ type: 'ai-title', aiTitle: 'Título novo' }),
+    ]);
+    await mon.refresh();
+    expect(sink[2][0].title).toBe('Título novo');
+  });
+
   it('coalesces concurrent refresh calls', async () => {
     const cwd = path.join(claudeDir, 'ws');
     writeSession('1.json', 1, 'sid-a', cwd);

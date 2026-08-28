@@ -27,7 +27,7 @@ export function readRegistry(
     try {
       const raw = JSON.parse(fs.readFileSync(path.join(sessionsDir, file), 'utf8'));
       if (
-        typeof raw.pid === 'number' &&
+        Number.isInteger(raw.pid) && raw.pid > 0 &&
         typeof raw.sessionId === 'string' &&
         typeof raw.cwd === 'string' &&
         alive(raw.pid)
