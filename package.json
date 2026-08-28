@@ -2,7 +2,7 @@
   "name": "claude-session-hud",
   "displayName": "Claude Session HUD",
   "description": "Mostra título e última atividade das sessões Claude Code vivas desta janela",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "danilouema",
   "private": true,
   "engines": { "vscode": "^1.90.0" },

@@ -4,6 +4,7 @@ import * as path from 'path';
 import { RegistryEntry, SessionCard, TranscriptInfo } from './model';
 import { filterByFolders, isPidAlive, readRegistry } from './registry';
 import { extractTranscriptInfo, findTranscriptPath } from './transcript';
+import { toGoal, toLastAction } from './summary';
 
 export interface MonitorOptions {
   claudeDir?: string;
@@ -115,7 +116,8 @@ export class SessionMonitor {
       pid: entry.pid,
       cwd: entry.cwd,
       title: info.aiTitle ?? entry.name ?? entry.sessionId.slice(0, 8),
-      description: info.lastPrompt ?? '',
+      goal: toGoal(info.firstPrompt),
+      lastAction: toLastAction(info.lastAssistantLine),
       lastActivityMs,
     };
   }

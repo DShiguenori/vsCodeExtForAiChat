@@ -9,6 +9,8 @@ export interface RegistryEntry {
 export interface TranscriptInfo {
   aiTitle?: string;
   lastPrompt?: string;
+  firstPrompt?: string;
+  lastAssistantLine?: string;
 }
 
 export interface SessionCard {
@@ -16,6 +18,7 @@ export interface SessionCard {
   pid: number;
   cwd: string;
   title: string;
-  description: string;
+  goal: string;
+  lastAction: string;
   lastActivityMs: number; // epoch ms
 }

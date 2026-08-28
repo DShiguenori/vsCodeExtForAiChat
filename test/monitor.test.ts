@@ -54,7 +54,31 @@ describe('SessionMonitor.refresh', () => {
 
     expect(sink).toHaveLength(1);
     expect(sink[0].map((c) => c.title)).toEqual(['Trabalho A', 'Trabalho B']);
-    expect(sink[0][0].description).toBe('roda os testes');
+    expect(sink[0][0].goal).toBe('roda os testes');
+    expect(sink[0][0].lastAction).toBe('');
+  });
+
+  it('derives goal from the first prompt and lastAction from the last assistant text', async () => {
+    const cwd = path.join(claudeDir, 'ws');
+    writeSession('1.json', 1, 'sid-a', cwd);
+    writeTranscript(cwd, 'sid-a', [
+      JSON.stringify({ type: 'ai-title', aiTitle: 'PR 27769 code review' }),
+      JSON.stringify({
+        type: 'last-prompt',
+        lastPrompt: 'https://dev.azure.com/org/proj/_git/repo/pullrequest/27769\n\nRevisa essa PR',
+      }),
+      JSON.stringify({
+        type: 'assistant',
+        message: { content: [{ type: 'text', text: 'Postado — 8 threads na PR 27769' }] },
+      }),
+      JSON.stringify({ type: 'last-prompt', lastPrompt: 'segundo prompt qualquer' }),
+    ]);
+
+    const sink: SessionCard[][] = [];
+    await makeMonitor(cwd, sink).refresh();
+
+    expect(sink[0][0].goal.startsWith('PR 27769 — Revisa essa PR')).toBe(true);
+    expect(sink[0][0].lastAction).toBe('Postado — 8 threads na PR 27769');
   });
 
   it('re-parses the transcript when mtime changes and drops dead sessions', async () => {
@@ -83,7 +107,8 @@ describe('SessionMonitor.refresh', () => {
     const sink: SessionCard[][] = [];
     await makeMonitor(cwd, sink).refresh();
     expect(sink[0][0].title).toBe('sid-with'); // sessionId.slice(0, 8)
-    expect(sink[0][0].description).toBe('');
+    expect(sink[0][0].goal).toBe('');
+    expect(sink[0][0].lastAction).toBe('');
     expect(sink[0][0].lastActivityMs).toBe(500);
   });
 
@@ -93,7 +118,7 @@ describe('SessionMonitor.refresh', () => {
     const sink: SessionCard[][] = [];
     await makeMonitor(cwd, sink).refresh();
     expect(sink[0][0].title).toBe('proj-a1');
-    expect(sink[0][0].description).toBe('');
+    expect(sink[0][0].goal).toBe('');
   });
 
   it('falls back when the transcript disappears, then re-resolves it when it reappears', async () => {

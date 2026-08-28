@@ -31,9 +31,13 @@ export function statusBarText(cards: SessionCard[]): string {
 
 export function statusBarTooltip(cards: SessionCard[], nowMs: number): string {
   return cards
-    .map((c) =>
-      `**${c.title}**\n\n${truncate(c.description, 80)} — _${formatRelativeTime(c.lastActivityMs, nowMs)}_`,
-    )
+    .map((c) => {
+      const lines = [`**${c.title}**`];
+      if (c.goal) lines.push(`Pedido: ${truncate(c.goal, 80)}`);
+      if (c.lastAction) lines.push(`Agora: ${truncate(c.lastAction, 80)}`);
+      lines.push(`_${formatRelativeTime(c.lastActivityMs, nowMs)}_`);
+      return lines.join('\n\n');
+    })
     .join('\n\n---\n\n');
 }
 
@@ -42,17 +46,28 @@ export function renderSessionsHtml(cards: SessionCard[], nowMs: number): string 
     cards.length === 0
       ? '<p class="empty">Nenhuma sessão Claude ativa nesta janela.</p>'
       : cards
-          .map(
-            (c) => `
+          .map((c) => {
+            const rows: string[] = [];
+            if (c.goal) {
+              rows.push(
+                `    <div class="row"><span class="label">Pedido</span><span class="value">${escapeHtml(truncate(c.goal, 120))}</span></div>`,
+              );
+            }
+            if (c.lastAction) {
+              rows.push(
+                `    <div class="row"><span class="label">Agora</span><span class="value">${escapeHtml(truncate(c.lastAction, 120))}</span></div>`,
+              );
+            }
+            const rowsHtml = rows.length > 0 ? `\n${rows.join('\n')}` : '';
+            return `
   <div class="card">
-    <div class="title">${escapeHtml(c.title)}</div>
-    <div class="desc">${escapeHtml(truncate(c.description, 140))}</div>
+    <div class="title">${escapeHtml(c.title)}</div>${rowsHtml}
     <div class="meta">
       <span>${escapeHtml(formatRelativeTime(c.lastActivityMs, nowMs))}</span>
       <span>${escapeHtml(path.basename(c.cwd))}</span>
     </div>
-  </div>`,
-          )
+  </div>`;
+          })
           .join('\n');
 
   return `<!DOCTYPE html>
@@ -69,9 +84,11 @@ export function renderSessionsHtml(cards: SessionCard[], nowMs: number): string 
     background: var(--vscode-sideBar-background);
   }
   .title { font-weight: 600; font-size: 13px; margin-bottom: 2px; }
-  .desc { color: var(--vscode-descriptionForeground); font-size: 12px; margin-bottom: 4px; }
+  .row { display: flex; gap: 6px; font-size: 12px; margin-top: 2px; }
+  .label { flex: 0 0 44px; color: var(--vscode-descriptionForeground); }
+  .value { flex: 1 1 auto; min-width: 0; }
   .meta { display: flex; justify-content: space-between; font-size: 11px;
-          color: var(--vscode-descriptionForeground); opacity: .8; }
+          color: var(--vscode-descriptionForeground); opacity: .8; margin-top: 4px; }
   .empty { color: var(--vscode-descriptionForeground); font-style: italic; }
 </style>
 </head>

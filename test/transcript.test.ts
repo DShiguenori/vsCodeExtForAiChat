@@ -78,4 +78,61 @@ describe('extractTranscriptInfo', () => {
     expect(await extractTranscriptInfo(f)).toEqual({});
     expect(await extractTranscriptInfo(path.join(dir, 'missing.jsonl'))).toEqual({});
   });
+
+  it('captures the FIRST last-prompt as firstPrompt while lastPrompt stays the last one', async () => {
+    const f = path.join(dir, 'first-last.jsonl');
+    fs.writeFileSync(
+      f,
+      [
+        JSON.stringify({ type: 'last-prompt', lastPrompt: 'primeiro prompt da sessão' }),
+        JSON.stringify({ type: 'last-prompt', lastPrompt: 'segundo prompt' }),
+      ].join('\n') + '\n',
+    );
+    const info = await extractTranscriptInfo(f);
+    expect(info.firstPrompt).toBe('primeiro prompt da sessão');
+    expect(info.lastPrompt).toBe('segundo prompt');
+  });
+
+  it('captures the last assistant text block, recovering into the buffer when the newest matching line has no usable text', async () => {
+    const f = path.join(dir, 'assistant.jsonl');
+    fs.writeFileSync(
+      f,
+      [
+        JSON.stringify({ type: 'last-prompt', lastPrompt: 'primeiro prompt' }),
+        JSON.stringify({
+          type: 'assistant',
+          message: { content: [{ type: 'text', text: 'Resposta antiga' }] },
+        }),
+        JSON.stringify({
+          type: 'assistant',
+          message: { content: [{ type: 'text', text: 'Resposta mais recente com texto' }] },
+        }),
+        // Newest line still matches the cheap "assistant"+"text" substring filter (so it
+        // lands in the buffer) but its text block is empty — extraction must recede to the
+        // previous buffered line and still find the earlier non-empty text.
+        JSON.stringify({
+          type: 'assistant',
+          message: { content: [{ type: 'text', text: '' }] },
+        }),
+      ].join('\n') + '\n',
+    );
+    const info = await extractTranscriptInfo(f);
+    expect(info.firstPrompt).toBe('primeiro prompt');
+    expect(info.lastAssistantLine).toBe('Resposta mais recente com texto');
+  });
+
+  it('leaves lastAssistantLine undefined when no assistant line has a text block', async () => {
+    const f = path.join(dir, 'no-text.jsonl');
+    fs.writeFileSync(
+      f,
+      [
+        JSON.stringify({
+          type: 'assistant',
+          message: { content: [{ type: 'tool_use', name: 'Bash', input: {} }] },
+        }),
+      ].join('\n') + '\n',
+    );
+    const info = await extractTranscriptInfo(f);
+    expect(info.lastAssistantLine).toBeUndefined();
+  });
 });
