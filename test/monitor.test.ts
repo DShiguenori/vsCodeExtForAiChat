@@ -113,6 +113,38 @@ describe('SessionMonitor.refresh', () => {
     expect(sink.length).toBe(2);
   });
 
+  it('fs.watch triggers refresh without polling', async () => {
+    const cwd = path.join(claudeDir, 'ws');
+    writeSession('1.json', 1, 'sid-a', cwd);
+    writeTranscript(cwd, 'sid-a', [
+      JSON.stringify({ type: 'ai-title', aiTitle: 'Session A' }),
+    ]);
+
+    const sink: SessionCard[][] = [];
+    const mon = new SessionMonitor({
+      claudeDir,
+      folders: () => [cwd],
+      aliveFn: () => true,
+      pollIntervalMs: 3_600_000, // polling cannot fire within test timeframe
+      onSnapshot: (cards) => sink.push(cards),
+    });
+
+    try {
+      mon.start();
+      while (sink.length < 1) await new Promise(r => setTimeout(r, 10));
+
+      // Write new session file to trigger fs.watch
+      writeSession('2.json', 2, 'sid-b', cwd);
+
+      // Wait for fs.watch to detect the change
+      while ((sink[sink.length - 1] ?? []).length < 2) await new Promise(r => setTimeout(r, 10));
+
+      expect(sink[sink.length - 1].map((c) => c.sessionId).sort()).toEqual(['sid-a', 'sid-b']);
+    } finally {
+      mon.stop();
+    }
+  });
+
   it('start/stop lifecycle manages polling and watching', async () => {
     const cwd = path.join(claudeDir, 'ws');
     writeSession('1.json', 1, 'sid-a', cwd);
@@ -129,11 +161,15 @@ describe('SessionMonitor.refresh', () => {
       onSnapshot: (cards) => sink.push(cards),
     });
 
-    mon.start();
-    while (sink.length < 2) await new Promise(r => setTimeout(r, 10));
-    mon.stop();
-    const n = sink.length;
-    await new Promise(r => setTimeout(r, 120));
-    expect(sink.length).toBe(n);
+    try {
+      mon.start();
+      while (sink.length < 2) await new Promise(r => setTimeout(r, 10));
+      mon.stop();
+      const n = sink.length;
+      await new Promise(r => setTimeout(r, 120));
+      expect(sink.length).toBe(n);
+    } finally {
+      mon.stop();
+    }
   });
 });
