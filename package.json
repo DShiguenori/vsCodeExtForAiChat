@@ -9,7 +9,21 @@
   "categories": ["Other"],
   "main": "./dist/extension.js",
   "activationEvents": ["onStartupFinished"],
-  "contributes": {},
+  "contributes": {
+    "views": {
+      "explorer": [
+        {
+          "type": "webview",
+          "id": "claudeSessionHud.sessions",
+          "name": "Sessões Claude",
+          "contextualTitle": "Claude Session HUD"
+        }
+      ]
+    },
+    "commands": [
+      { "command": "claudeSessionHud.refresh", "title": "Claude Session HUD: Atualizar" }
+    ]
+  },
   "scripts": {
     "vscode:prepublish": "npm run build",
     "build": "node esbuild.mjs",
