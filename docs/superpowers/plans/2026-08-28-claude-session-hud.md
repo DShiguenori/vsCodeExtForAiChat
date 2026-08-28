@@ -118,12 +118,14 @@ export default defineConfig({
 });
 ```
 
-- [ ] **Step 5: Criar .gitignore**
+- [ ] **Step 5: Criar/atualizar .gitignore** (o arquivo pode já existir no repo — garantir que contém exatamente estas entradas):
 
 ```
 node_modules/
 dist/
 *.vsix
+.claude/settings.local.json
+.DS_Store
 ```
 
 - [ ] **Step 6: Criar .vscode/launch.json**
@@ -403,7 +405,7 @@ afterEach(() => { fs.rmSync(dir, { recursive: true, force: true }); });
 
 describe('projectSlug', () => {
   it('replaces every non-alphanumeric char with dash', () => {
-    expect(projectSlug('/Users/danilo.uema/Work/proj_x')).toBe('-Users-danilo-uema-Work-proj-x');
+    expect(projectSlug('/Users/some.user/Work/proj_x')).toBe('-Users-some-user-Work-proj-x');
   });
 });
 
@@ -568,8 +570,8 @@ import {
 import { SessionCard } from '../src/claude/model';
 
 const card = (over: Partial<SessionCard> = {}): SessionCard => ({
-  sessionId: 'sid-1', pid: 1, cwd: '/w/fas1',
-  title: 'Azure function PDF', description: 'abre um PR com essa correção',
+  sessionId: 'sid-1', pid: 1, cwd: '/w/webapp',
+  title: 'Corrige paginação do PDF', description: 'abre um PR com essa correção',
   lastActivityMs: 0, ...over,
 });
 
@@ -604,7 +606,7 @@ describe('statusBarText', () => {
     expect(statusBarText([])).toBe('');
   });
   it('shows the single session title', () => {
-    expect(statusBarText([card()])).toBe('$(sparkle) Azure function PDF');
+    expect(statusBarText([card()])).toBe('$(sparkle) Corrige paginação do PDF');
   });
   it('shows the count for multiple sessions', () => {
     expect(statusBarText([card(), card({ sessionId: 'sid-2' })])).toBe('$(sparkle) 2 sessões Claude');
@@ -614,7 +616,7 @@ describe('statusBarText', () => {
 describe('statusBarTooltip', () => {
   it('lists every session title', () => {
     const tip = statusBarTooltip([card(), card({ sessionId: 's2', title: 'Outro trabalho' })], 0);
-    expect(tip).toContain('Azure function PDF');
+    expect(tip).toContain('Corrige paginação do PDF');
     expect(tip).toContain('Outro trabalho');
   });
 });
@@ -626,7 +628,7 @@ describe('renderSessionsHtml', () => {
     expect(html).not.toContain('<script>x');
     expect(html).toContain('a &amp; b');
     expect(html).toContain('há 1 min');
-    expect(html).toContain('fas1'); // basename do cwd
+    expect(html).toContain('webapp'); // basename do cwd
   });
   it('renders the empty state', () => {
     expect(renderSessionsHtml([], 0)).toContain('Nenhuma sessão Claude ativa nesta janela');
@@ -1125,7 +1127,7 @@ Expected: tudo verde. (`vscode.WebviewView.badge` existe desde 1.72 — dentro d
 - [ ] **Step 6: Teste manual (F5) — checklist**
 
 1. Apertar F5 (config "Rodar extensão"); abre a janela "Extension Development Host".
-2. Na janela de dev, abrir uma pasta que tenha sessão Claude viva (ex.: `~/fas1` — conferir antes com `ls ~/.claude/sessions/`).
+2. Na janela de dev, abrir uma pasta que tenha sessão Claude viva (conferir candidatas com `ls ~/.claude/sessions/`).
 3. Verificar no Explorer a view **"Sessões Claude"**: card com título (= título da aba do Claude), último prompt e "há X min".
 4. Verificar item na status bar (esquerda, ícone sparkle); clicar nele deve focar a view.
 5. Mandar uma mensagem nova na sessão Claude dessa janela → card atualiza em ≤ 3 s (título/descrição/tempo).
@@ -1221,7 +1223,7 @@ Expected: "Extension 'claude-session-hud-0.1.0.vsix' was successfully installed.
 
 1. Recarregar (`Developer: Reload Window`) 2+ janelas que tenham sessões Claude vivas.
 2. Cada janela mostra APENAS as suas sessões (conferir contra `ls ~/.claude/sessions/`).
-3. Janela multi-root com 2 sessões (ex.: mono2) mostra 2 cards.
+3. Janela multi-root com 2 sessões simultâneas mostra 2 cards (se houver uma disponível).
 4. Encerrar uma sessão Claude → card some em ≤ 3 s.
 5. Critérios de sucesso do spec todos atendidos.
 

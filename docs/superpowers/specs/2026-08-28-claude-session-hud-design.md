@@ -22,10 +22,10 @@ daquela janela.
    execução, removido quando a sessão morre. Campos relevantes (amostra real):
 
    ```json
-   {"pid":14946,"sessionId":"4b4d5510-29f9-4118-9a7f-1228bf970280",
-    "cwd":"/Users/danilouema/fas3","startedAt":1787919863411,
+   {"pid":12345,"sessionId":"1a2b3c4d-0000-4000-8000-1234567890ab",
+    "cwd":"/Users/you/projects/app","startedAt":1787919863411,
     "version":"2.1.247","kind":"interactive","entrypoint":"claude-vscode",
-    "name":"fas3-02","nameSource":"derived"}
+    "name":"app-02","nameSource":"derived"}
    ```
 
    O diretório também contém arquivos `*.key` (ignorar tudo que não é `.json`). Arquivos podem
@@ -37,8 +37,8 @@ daquela janela.
    `<sessionId>.jsonl`. Linhas JSONL de interesse (podem aparecer várias vezes; **a última vence**):
 
    ```json
-   {"type":"ai-title","sessionId":"…","aiTitle":"Azure function PDF nomes e páginas deslocados"}
-   {"type":"last-prompt","lastPrompt":"abre um PR com essa correção e me dá a URL","leafUuid":"…"}
+   {"type":"ai-title","sessionId":"…","aiTitle":"Corrige paginação do relatório PDF"}
+   {"type":"last-prompt","lastPrompt":"abre um PR com essa correção","leafUuid":"…"}
    ```
 
    O `mtime` do arquivo é a última atividade da sessão.
@@ -93,7 +93,7 @@ dependências injetáveis (dirs e `aliveFn`) para TDD sem mock de VSCode.
 
 1. Abrir qualquer janela VSCode com sessões Claude vivas → view "Sessões Claude" lista cada uma
    com título, último prompt e "há X min", em ≤ 3 s.
-2. Janela multi-root (ex.: mono2 com 2 sessões) mostra as duas, separadas.
+2. Janela multi-root com 2 sessões simultâneas mostra as duas, separadas.
 3. Sessão encerrada some da lista em ≤ 3 s; sessão nova aparece em ≤ 3 s.
 4. Janela sem sessão mostra estado vazio; status bar some.
 5. `npm test` (vitest + typecheck) verde; extensão instala via `.vsix` local.
