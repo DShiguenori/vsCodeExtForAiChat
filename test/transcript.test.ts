@@ -54,18 +54,22 @@ describe('extractTranscriptInfo', () => {
     expect(info.lastPrompt).toBe('faz o /merge-main');
   });
 
-  it('captures a last-prompt whose text contains the literal substring "ai-title"', async () => {
+  it('captures a last-prompt whose serialized line also contains the literal substring "ai-title"', async () => {
     const f = path.join(dir, 't2.jsonl');
+    // lastPrompt is the bare word `ai-title` (no inner quotes in the source string), so once
+    // JSON.stringify wraps it in its own quotes the raw .jsonl line contains the literal
+    // substring `"ai-title"` — the same marker the ai-title branch scans for. This is what
+    // used to make the record fall into the first `if` and get swallowed by an `else if`.
     fs.writeFileSync(
       f,
       [
         JSON.stringify({ type: 'ai-title', aiTitle: 'Título inicial' }),
-        JSON.stringify({ type: 'last-prompt', lastPrompt: 'renomeia o campo "ai-title" do schema' }),
+        JSON.stringify({ type: 'last-prompt', lastPrompt: 'ai-title' }),
       ].join('\n') + '\n',
     );
     const info = await extractTranscriptInfo(f);
     expect(info.aiTitle).toBe('Título inicial');
-    expect(info.lastPrompt).toBe('renomeia o campo "ai-title" do schema');
+    expect(info.lastPrompt).toBe('ai-title');
   });
 
   it('returns empty object for empty or unreadable file', async () => {
