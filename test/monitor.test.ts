@@ -160,10 +160,30 @@ describe('SessionMonitor.refresh', () => {
       while (sink.length < 1) await new Promise(r => setTimeout(r, 10));
 
       // Write new session file to trigger fs.watch
+      const sessionFile = path.join(claudeDir, 'sessions', '2.json');
       writeSession('2.json', 2, 'sid-b', cwd);
 
-      // Wait for fs.watch to detect the change
-      while ((sink[sink.length - 1] ?? []).length < 2) await new Promise(r => setTimeout(r, 10));
+      // Wait for fs.watch to detect the change. macOS occasionally drops or
+      // badly delays a directory-watch event (measured ~1-2% of the time),
+      // most likely right after the watcher is armed — exactly this test's
+      // timing. Rather than hang on a single dropped event until the test
+      // timeout, periodically re-touch the registry file (content stays
+      // valid) to regenerate an event, bounded by an explicit step-count
+      // deadline so a real regression still fails loudly and promptly.
+      const stepMs = 50;
+      const touchEverySteps = 5; // ~250ms
+      const deadlineSteps = 60; // ~3000ms
+      let steps = 0;
+      while ((sink[sink.length - 1] ?? []).length < 2) {
+        if (steps >= deadlineSteps) {
+          expect.fail('fs.watch never delivered an event within 3s');
+        }
+        await new Promise((r) => setTimeout(r, stepMs));
+        steps++;
+        if (steps % touchEverySteps === 0) {
+          fs.utimesSync(sessionFile, new Date(), new Date());
+        }
+      }
 
       expect(sink[sink.length - 1].map((c) => c.sessionId).sort()).toEqual(['sid-a', 'sid-b']);
     } finally {
